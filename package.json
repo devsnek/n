@@ -1,0 +1,23 @@
+{
+  "name": "n.gc.gy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devsnek/n.git"
+  },
+  "author": "snek <me@gus.host>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/devsnek/n/issues"
+  },
+  "homepage": "https://github.com/devsnek/n#readme",
+  "dependencies": {
+    "snekfetch": "^3.5.3"
+  }
+}
