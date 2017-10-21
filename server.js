@@ -56,8 +56,12 @@ const server = http.createServer(async(req, res) => {
       break;
     case '': {
       const ua = req.headers['user-agent'];
-      if (!/Wget|curl/.test(ua)) res.end(index.rendered);
-      else res.end(index.striped);
+      if (!/Wget|curl/.test(ua)) {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(index.rendered);
+      } else {
+        res.end(index.striped);
+      }
       break;
     }
     case 'latest':

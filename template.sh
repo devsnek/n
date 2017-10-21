@@ -26,7 +26,7 @@ find . -maxdepth 1 -type f -delete
 cp -r * /usr/local
 
 if hash node 2>/dev/null; then
-  echo "Node.js {{VERSION}} has been installed"
+  echo "Node.js $(node -v) has been installed"
 else
   echo "Node.js install failed!"
   exit 1
