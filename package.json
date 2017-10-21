@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/devsnek/n#readme",
   "dependencies": {
+    "marked": "^0.3.6",
+    "remove-markdown": "^0.2.2",
     "snekfetch": "^3.5.3"
   }
 }

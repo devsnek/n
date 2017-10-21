@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const request = require('snekfetch');
+const marked = require('marked');
 
 const template = fs.readFileSync('./template.sh').toString();
 const t = (v, c) => {
@@ -8,6 +9,15 @@ const t = (v, c) => {
   return template
     .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
     .replace(/{{CHANNEL}}/g, c);
+};
+
+const readme = fs.readFileSync('./README.md').toString();
+const index = {
+  rendered: marked(readme),
+  striped: readme
+    .replace(/^#{1,5} /gm, '')
+    .replace(/\[.+?\]\(.+?\)/g, '')
+    .trim(),
 };
 
 const vcache = {};
@@ -40,9 +50,16 @@ async function ensureVersion(channel) {
 const server = http.createServer(async(req, res) => {
   const url = req.url.slice(1);
   switch (url) {
-    case '':
-      res.end('hi');
+    case 'favicon.ico':
+      res.writeHead(404);
+      res.end();
       break;
+    case '': {
+      const ua = req.headers['user-agent'];
+      if (!/Wget|curl/.test(ua)) res.end(index.rendered);
+      else res.end(index.striped);
+      break;
+    }
     case 'latest':
     case 'lts':
     case 'nightly': {
