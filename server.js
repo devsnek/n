@@ -3,12 +3,23 @@ const fs = require('fs');
 const request = require('snekfetch');
 const marked = require('marked');
 
+const isSemver = (s) => /^(\d+\.)?(\d+\.)?(\*|\d+)(-[a-zA-Z0-9]+?)?$/.test(s);
+
+const vcache = {};
+const cmap = {
+  latest: 'release',
+  lts: 'release',
+  rc: 'rc',
+  nightly: 'nightly',
+  default: 'release',
+};
+
 const template = fs.readFileSync('./template.sh').toString();
-const t = (v, c) => {
+const t = (v, c = v) => {
   console.log(`Generating ${c}/${v}`); // eslint-disable-line no-console
   return template
     .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
-    .replace(/{{CHANNEL}}/g, c);
+    .replace(/{{CHANNEL}}/g, cmap[c] || cmap.default);
 };
 
 const readme = fs.readFileSync('./README.md').toString();
@@ -20,18 +31,15 @@ const index = {
     .trim(),
 };
 
-const vcache = {};
-
 async function ensureVersion(channel) {
   const i = vcache[channel];
   if (!i || (i && Date.now() - i.time > 600000)) {
-    const url = channel === 'nightly' ?
-      'https://nodejs.org/download/nightly/index.json' :
-      'https://nodejs.org/dist/index.json';
+    const url = `https://nodejs.org/download/${cmap[channel] || cmap.default}/index.json`;
     const versions = await request.get(url).then((r) => r.body);
     switch (channel) {
       case 'latest':
-      case 'nightly': {
+      case 'nightly':
+      case 'rc': {
         const version = versions[0].version;
         vcache[channel] = { time: Date.now(), version };
         return version;
@@ -66,13 +74,19 @@ const server = http.createServer(async(req, res) => {
     }
     case 'latest':
     case 'lts':
-    case 'nightly': {
+    case 'nightly':
+    case 'rc': {
       const version = await ensureVersion(url);
-      res.end(t(version, url === 'nightly' ? 'nightly' : 'release'));
+      res.end(t(version, url));
       break;
     }
     default:
-      res.end(t(url, 'release'));
+      if (isSemver(url)) {
+        res.end(t(url));
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
   }
 });
 
