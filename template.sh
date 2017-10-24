@@ -23,7 +23,7 @@ fi
 cd $ACH_NAME
 find . -maxdepth 1 -type f -delete
 
-cp -r * /usr/local
+cp -r * {{INSTALL_DIR}}
 
 if hash node 2>/dev/null; then
   echo "Node.js $(node -v) has been installed"

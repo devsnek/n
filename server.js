@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const request = require('snekfetch');
 const marked = require('marked');
+const querystring = require('querystring');
 
 const isSemver = (s) => /^(\d+\.)?(\d+\.)?(\*|\d+)(-[a-zA-Z0-9]+?)?$/.test(s);
 
@@ -15,11 +16,12 @@ const cmap = {
 };
 
 const template = fs.readFileSync('./template.sh').toString();
-const t = (v, c = v) => {
+const t = (v, c = v, i = '/usr/bin') => {
   console.log(`Generating ${c}/${v}`); // eslint-disable-line no-console
   return template
     .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
-    .replace(/{{CHANNEL}}/g, cmap[c] || cmap.default);
+    .replace(/{{CHANNEL}}/g, cmap[c] || cmap.default)
+    .replace(/{{INSTALL_DIR}}/g, i);
 };
 
 const readme = fs.readFileSync('./README.md').toString();
@@ -56,7 +58,8 @@ async function ensureVersion(channel) {
 }
 
 const server = http.createServer(async(req, res) => {
-  const url = req.url.slice(1);
+  let [url, query] = req.url.slice(1).split('?');
+  query = query ? querystring.parse(query) : {};
   switch (url) {
     case 'favicon.ico':
       res.writeHead(404);
@@ -77,12 +80,12 @@ const server = http.createServer(async(req, res) => {
     case 'nightly':
     case 'rc': {
       const version = await ensureVersion(url);
-      res.end(t(version, url));
+      res.end(t(version, url, query.dir));
       break;
     }
     default:
       if (isSemver(url)) {
-        res.end(t(url));
+        res.end(t(url, url, query.dir));
       } else {
         res.writeHead(404);
         res.end();
