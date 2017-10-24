@@ -16,7 +16,7 @@ const cmap = {
 };
 
 const template = fs.readFileSync('./template.sh').toString();
-const t = (v, c = v, i = '/usr/bin') => {
+const t = (v, c = v, i = '/usr/local') => {
   console.log(`Generating ${c}/${v}`); // eslint-disable-line no-console
   return template
     .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
