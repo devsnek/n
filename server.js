@@ -13,6 +13,7 @@ const cmap = {
   rc: 'rc',
   nightly: 'nightly',
   default: 'release',
+  'v8-canary': 'v8-canary',
 };
 
 const template = fs.readFileSync('./template.sh').toString();
@@ -41,7 +42,8 @@ async function ensureVersion(channel) {
     switch (channel) {
       case 'latest':
       case 'nightly':
-      case 'rc': {
+      case 'rc':
+      case 'v8-canary': {
         const version = versions[0].version;
         vcache[channel] = { time: Date.now(), version };
         return version;
@@ -78,7 +80,8 @@ const server = http.createServer(async(req, res) => {
     case 'latest':
     case 'lts':
     case 'nightly':
-    case 'rc': {
+    case 'rc':
+    case 'v8-canary': {
       const version = await ensureVersion(url);
       res.end(t(version, url, query.dir));
       break;
