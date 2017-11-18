@@ -96,4 +96,7 @@ const server = http.createServer(async(req, res) => {
   }
 });
 
-server.listen('/tmp/n.gc.gy.sock');
+const f = '/tmp/n.gc.gy.sock';
+fs.unlinkSync(f);
+server.listen(f);
+fs.chmodSync(f, '777');
