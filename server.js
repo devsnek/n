@@ -69,7 +69,9 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+const sock = '/tmp/n.sock';
 server.listen('/tmp/n.sock');
+fs.chmodSync(sock, 666);
 
 process.on('SIGINT', () => {
   server.close();
