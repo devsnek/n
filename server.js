@@ -69,7 +69,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(8080); // '/tmp/n.sock');
+server.listen('/tmp/n.sock');
 
 process.on('SIGINT', () => {
   server.close();
