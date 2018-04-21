@@ -8,18 +8,19 @@ const querystring = require('querystring');
 
 const isSemver = (s) => /^(\d+\.)?(\d+\.)?(\*|\d+)(-[a-zA-Z0-9]+?)?$/.test(s);
 
+
+const template = fs.readFileSync('./template.sh').toString();
 const channelOverrideMap = {
   default: 'release',
   lts: 'release',
   latest: 'release',
 };
 
-const template = fs.readFileSync('./template.sh').toString();
-const t = (v, c = v, i = '/usr/local') => {
-  console.log(`Generating ${c}/${v}`); // eslint-disable-line no-console
+const t = (version, channel = version, i = '/usr/local') => {
+  console.log(`Generating ${channel}/${version}`); // eslint-disable-line no-console
   return template
-    .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
-    .replace(/{{CHANNEL}}/g, channelOverrideMap[c] || c)
+    .replace(/{{VERSION}}/g, `v${version.replace('v', '')}`)
+    .replace(/{{CHANNEL}}/g, channel)
     .replace(/{{INSTALL_DIR}}/g, i);
 };
 
@@ -55,23 +56,28 @@ const server = http.createServer(async (req, res) => {
 
 
     if (isSemver(url)) {
-      res.end(t(url, url, query.dir));
+      res.end(t(url, 'release', query.dir));
     } else {
-      const json = `https://nodejs.org/download/${channelOverrideMap[url] || url}/index.json`;
+      const channel = channelOverrideMap[url] || url;
+      const json = `https://nodejs.org/download/${channel}/index.json`;
       const versions = await request.get(json).then((r) => r.body);
       const { version } = url === 'lts' ? versions.find((v) => v.lts) : versions[0];
 
-      res.end(t(version, url, query.dir));
+      res.end(t(version, channel, query.dir));
     }
   } catch (err) {
+    console.error(err);
     res.writeHead(500);
     res.end('500 Server Error');
   }
 });
 
+const dev = /^dev/.test(process.env.NODE_ENV);
+
 const sock = '/tmp/n.sock';
-server.listen('/tmp/n.sock');
-fs.chmodSync(sock, 666);
+server.listen(dev ? 8080 : sock);
+if (!dev)
+  fs.chmodSync(sock, 666);
 
 process.on('SIGINT', () => {
   server.close();
