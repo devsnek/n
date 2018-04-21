@@ -1,3 +1,5 @@
+'use strict';
+
 const http = require('http');
 const fs = require('fs');
 const request = require('snekfetch');
@@ -6,14 +8,10 @@ const querystring = require('querystring');
 
 const isSemver = (s) => /^(\d+\.)?(\d+\.)?(\*|\d+)(-[a-zA-Z0-9]+?)?$/.test(s);
 
-const vcache = {};
-const cmap = {
-  latest: 'release',
-  lts: 'release',
-  rc: 'rc',
-  nightly: 'nightly',
+const channelOverrideMap = {
   default: 'release',
-  'v8-canary': 'v8-canary',
+  lts: 'release',
+  latest: 'release',
 };
 
 const template = fs.readFileSync('./template.sh').toString();
@@ -21,7 +19,7 @@ const t = (v, c = v, i = '/usr/local') => {
   console.log(`Generating ${c}/${v}`); // eslint-disable-line no-console
   return template
     .replace(/{{VERSION}}/g, `v${v.replace('v', '')}`)
-    .replace(/{{CHANNEL}}/g, cmap[c] || cmap.default)
+    .replace(/{{CHANNEL}}/g, channelOverrideMap[c] || c)
     .replace(/{{INSTALL_DIR}}/g, i);
 };
 
@@ -34,40 +32,18 @@ const index = {
     .trim(),
 };
 
-async function ensureVersion(channel) {
-  const i = vcache[channel];
-  if (!i || (i && Date.now() - i.time > 600000)) {
-    const url = `https://nodejs.org/download/${cmap[channel] || cmap.default}/index.json`;
-    const versions = await request.get(url).then((r) => r.body);
-    switch (channel) {
-      case 'latest':
-      case 'nightly':
-      case 'rc':
-      case 'v8-canary': {
-        const version = versions[0].version;
-        vcache[channel] = { time: Date.now(), version };
-        return version;
-      }
-      case 'lts': {
-        const version = versions.find((v) => v.lts).version;
-        vcache.lts = { time: Date.now(), version };
-        return version;
-      }
-    }
-  } else {
-    return i.version;
-  }
-}
+const server = http.createServer(async (req, res) => {
+  try {
+    let [url, query] = req.url.slice(1).split('?');
+    query = query ? querystring.parse(query) : {};
 
-const server = http.createServer(async(req, res) => {
-  let [url, query] = req.url.slice(1).split('?');
-  query = query ? querystring.parse(query) : {};
-  switch (url) {
-    case 'favicon.ico':
+    if (url === 'favicon.ico') {
       res.writeHead(404);
       res.end();
-      break;
-    case '': {
+      return;
+    }
+
+    if (url === '') {
       const ua = req.headers['user-agent'];
       if (!/Wget|curl/.test(ua)) {
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -75,28 +51,26 @@ const server = http.createServer(async(req, res) => {
       } else {
         res.end(index.striped);
       }
-      break;
     }
-    case 'latest':
-    case 'lts':
-    case 'nightly':
-    case 'rc':
-    case 'v8-canary': {
-      const version = await ensureVersion(url);
+
+
+    if (isSemver(url)) {
+      res.end(t(url, url, query.dir));
+    } else {
+      const json = `https://nodejs.org/download/${channelOverrideMap[url] || url}/index.json`;
+      const versions = await request.get(json).then((r) => r.body);
+      const { version } = url === 'lts' ? versions.find((v) => v.lts) : versions[0];
+
       res.end(t(version, url, query.dir));
-      break;
     }
-    default:
-      if (isSemver(url)) {
-        res.end(t(url, url, query.dir));
-      } else {
-        res.writeHead(404);
-        res.end();
-      }
+  } catch (err) {
+    res.writeHead(500);
+    res.end('500 Server Error');
   }
 });
 
-const f = '/tmp/n.gc.gy.sock';
-fs.unlinkSync(f);
-server.listen(f);
-fs.chmodSync(f, '777');
+server.listen(8080); // '/tmp/n.sock');
+
+process.on('SIGINT', () => {
+  server.close();
+});
