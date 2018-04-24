@@ -17,7 +17,7 @@ echo "Extracting $ACH_NAME.tar.gz"
 if hash pv 2>/dev/null; then
   pv -p -w 80 "$ACH_NAME.tar.gz" | tar -xf -
 else
-  tar -xfz "$ACH_NAME.tar.gz"
+  tar -xzf "$ACH_NAME.tar.gz"
 fi
 
 cd $ACH_NAME
